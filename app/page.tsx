@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,26 @@ export default function Home() {
   const supabase = useSupabaseClient();
   const user = useUser();
   const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchTodos = async () => {
+      const { data } = await supabase
+        .from('todos')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('deleted', false)
+        .eq('completed', false);
+      
+      if (data) {
+        setTodos(data);
+      }
+    };
+
+    fetchTodos();
+  }, [supabase, user]);
 
   const addTodo = async () => {
     if (!newTask || !date || !stake || !user) return;
@@ -46,7 +66,7 @@ export default function Home() {
 
     const { data, error } = await supabase
       .from('todos')
-      .insert([todo])
+      .insert(todo)
       .select()
       .single();
 
@@ -106,7 +126,10 @@ export default function Home() {
   const deleteTodo = async (id: string) => {
     const { error } = await supabase
       .from('todos')
-      .delete()
+      .update({ 
+        deleted: true,
+        deleted_at: new Date().toISOString() 
+      })
       .eq('id', id);
 
     if (!error) {
@@ -170,82 +193,94 @@ export default function Home() {
               <Button onClick={addTodo}>Add Task</Button>
             </div>
 
+            <div className="space-y-4">
+              <Input
+                placeholder="Search todos..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+
             <div className="space-y-4 mt-8">
-              {todos.map((todo) => (
-                <Card key={todo.id} className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <h3 className={cn("text-xl font-semibold", 
-                        todo.completed && "line-through text-muted-foreground"
-                      )}>
-                        {todo.task}
-                      </h3>
-                      <div className="flex gap-4 mt-2">
-                        <div className="flex items-center text-muted-foreground">
-                          <Timer className="w-4 h-4 mr-1" />
-                          {format(new Date(todo.deadline), "PPP")}
-                        </div>
-                        <div className="flex items-center text-muted-foreground">
-                          <DollarSign className="w-4 h-4 mr-1" />
-                          {todo.stake.toFixed(2)}
+              {todos
+                .filter(todo => 
+                  todo.task.toLowerCase().includes(searchQuery.toLowerCase())
+                )
+                .map((todo) => (
+                  <Card key={todo.id} className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <h3 className={cn("text-xl font-semibold", 
+                          todo.completed && "line-through text-muted-foreground"
+                        )}>
+                          {todo.task}
+                        </h3>
+                        <div className="flex gap-4 mt-2">
+                          <div className="flex items-center text-muted-foreground">
+                            <Timer className="w-4 h-4 mr-1" />
+                            {format(new Date(todo.deadline), "PPP")}
+                          </div>
+                          <div className="flex items-center text-muted-foreground">
+                            <DollarSign className="w-4 h-4 mr-1" />
+                            {todo.stake.toFixed(2)}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {todo.completed ? (
-                        <>
-                          <Badge variant="default" className="bg-green-500">
-                            <CheckCircle2 className="w-4 h-4 mr-1" />
-                            Completed
-                          </Badge>
-                          <a
-                            href={todo.evidence}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-500 hover:underline"
-                          >
-                            View Evidence
-                          </a>
-                        </>
-                      ) : (
-                        <>
-                          {selectedTodo === todo.id ? (
-                            <div className="flex gap-2">
-                              <Input
-                                type="file"
-                                accept="image/*,video/*,.pdf"
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) {
-                                    handleFileUpload(todo.id, file);
-                                  }
-                                }}
-                                className="w-[200px]"
-                              />
-                              {uploading && <span>Uploading...</span>}
-                            </div>
-                          ) : (
-                            <Button
-                              variant="outline"
-                              onClick={() => setSelectedTodo(todo.id)}
+                      <div className="flex items-center gap-2">
+                        {todo.completed ? (
+                          <>
+                            <Badge variant="default" className="bg-green-500">
+                              <CheckCircle2 className="w-4 h-4 mr-1" />
+                              Completed
+                            </Badge>
+                            <a
+                              href={todo.evidence}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-500 hover:underline"
                             >
-                              <Upload className="w-4 h-4 mr-2" />
-                              Upload Evidence
-                            </Button>
-                          )}
-                        </>
-                      )}
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        onClick={() => deleteTodo(todo.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                              View Evidence
+                            </a>
+                          </>
+                        ) : (
+                          <>
+                            {selectedTodo === todo.id ? (
+                              <div className="flex gap-2">
+                                <Input
+                                  type="file"
+                                  accept="image/*,video/*,.pdf"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      handleFileUpload(todo.id, file);
+                                    }
+                                  }}
+                                  className="w-[200px]"
+                                />
+                                {uploading && <span>Uploading...</span>}
+                              </div>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                onClick={() => setSelectedTodo(todo.id)}
+                              >
+                                <Upload className="w-4 h-4 mr-2" />
+                                Upload Evidence
+                              </Button>
+                            )}
+                          </>
+                        )}
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          onClick={() => deleteTodo(todo.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                ))}
             </div>
           </div>
         </CardContent>

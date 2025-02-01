@@ -6,7 +6,10 @@ import { ThemeProvider } from "next-themes";
 import { Navbar } from '@/components/navbar';
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { SessionContextProvider } from '@supabase/auth-helpers-react';
+import { SessionContextProvider, useUser } from '@supabase/auth-helpers-react';
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Menu } from "lucide-react";
+import Link from 'next/link';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -28,6 +31,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   const [mounted, setMounted] = useState(false);
+  const user = useUser();
 
   useEffect(() => {
     setMounted(true);
@@ -48,8 +52,29 @@ export default function RootLayout({
       <body className={inter.className}>
         <SessionContextProvider supabaseClient={supabase}>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-            <Navbar />
-            {children}
+            <div className="flex min-h-screen">
+              <Sheet>
+                <SheetTrigger className="md:hidden p-4">
+                  <Menu className="h-6 w-6" />
+                </SheetTrigger>
+                <SheetContent side="left" className="w-[300px]">
+                  <div className="p-4">
+                    <h2 className="text-xl font-bold mb-4">Todo Stakes</h2>
+                    <nav className="space-y-2">
+                      <Link href="/" className="block hover:bg-accent p-2 rounded">Home</Link>
+                      <Link href="/profile" className="block hover:bg-accent p-2 rounded">Profile</Link>
+                      {user?.email?.endsWith('@admin.com') && (
+                        <Link href="/admin" className="block hover:bg-accent p-2 rounded">Admin</Link>
+                      )}
+                    </nav>
+                  </div>
+                </SheetContent>
+              </Sheet>
+              <div className="flex-1">
+                <Navbar />
+                {children}
+              </div>
+            </div>
           </ThemeProvider>
         </SessionContextProvider>
       </body>

@@ -51,6 +51,20 @@ export function Navbar() {
                 <LogOut className="h-5 w-5 mr-2" />
                 Sign Out
               </Button>
+              {user && (
+                <Link href="/profile" className="flex items-center gap-2">
+                  {user.user_metadata.avatar_url ? (
+                    <img 
+                      src={user.user_metadata.avatar_url} 
+                      className="w-8 h-8 rounded-full"
+                      alt="Profile"
+                    />
+                  ) : (
+                    <User className="h-5 w-5" />
+                  )}
+                  <span>{user.user_metadata.username || user.email}</span>
+                </Link>
+              )}
             </>
           ) : (
             <Link href="/auth">
