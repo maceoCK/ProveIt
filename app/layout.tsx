@@ -2,6 +2,7 @@
 
 import './globals.css';
 import { Inter } from 'next/font/google';
+import { Metadata } from 'next';
 import { ThemeProvider } from "next-themes";
 import { Navbar } from '@/components/navbar';
 import { useState, useEffect } from 'react';
@@ -40,6 +41,7 @@ export default function RootLayout({
   if (!mounted) {
     return (
       <html lang="en">
+        <head />
         <body className={inter.className}>
           <div className="min-h-screen bg-background" />
         </body>
@@ -49,6 +51,7 @@ export default function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
+      <head />
       <body className={inter.className}>
         <SessionContextProvider supabaseClient={supabase}>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
@@ -59,7 +62,7 @@ export default function RootLayout({
                 </SheetTrigger>
                 <SheetContent side="left" className="w-[300px]">
                   <div className="p-4">
-                    <h2 className="text-xl font-bold mb-4">Todo Stakes</h2>
+                    <h2 className="text-xl font-bold mb-4">ProveIt</h2>
                     <nav className="space-y-2">
                       <Link href="/" className="block hover:bg-accent p-2 rounded">Home</Link>
                       <Link href="/profile" className="block hover:bg-accent p-2 rounded">Profile</Link>
@@ -72,7 +75,9 @@ export default function RootLayout({
               </Sheet>
               <div className="flex-1">
                 <Navbar />
-                {children}
+                <main className="container mx-auto p-4">
+                  {children}
+                </main>
               </div>
             </div>
           </ThemeProvider>

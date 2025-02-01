@@ -207,7 +207,7 @@ export default function Home() {
                   todo.task.toLowerCase().includes(searchQuery.toLowerCase())
                 )
                 .map((todo) => (
-                  <Card key={todo.id} className="p-4">
+                  <Card key={todo.id} className="p-4" onClick={() => router.push(`/todos/${todo.id}`)}>
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <h3 className={cn("text-xl font-semibold", 
