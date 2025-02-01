@@ -1,18 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useSupabaseClient } from '@supabase/auth-helpers-react';
+import { useSupabaseClient, useUser } from '@supabase/auth-helpers-react';
 import { useRouter } from 'next/navigation';
 
 export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
+  const [loading, setLoading] = useState(true);
   const supabase = useSupabaseClient();
   const router = useRouter();
+  const user = useUser();
+
+  useEffect(() => {
+    if (user) {
+      router.push('/');
+    }
+    setLoading(false);
+  }, [user, router]);
+
+  if (loading) {
+    return <div className="container mx-auto py-8">Loading...</div>;
+  }
+
+  if (user) {
+    return null;
+  }
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -115,7 +115,9 @@ export default function Home() {
   };
 
   if (!user) {
-    router.push('/auth');
+    if (typeof window !== 'undefined') {
+      router.push('/auth');
+    }
     return null;
   }
 
@@ -192,7 +194,7 @@ export default function Home() {
                     <div className="flex items-center gap-2">
                       {todo.completed ? (
                         <>
-                          <Badge variant="success" className="bg-green-500">
+                          <Badge variant="default" className="bg-green-500">
                             <CheckCircle2 className="w-4 h-4 mr-1" />
                             Completed
                           </Badge>
