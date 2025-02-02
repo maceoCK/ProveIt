@@ -10,6 +10,7 @@ import { SessionContextProvider, useUser } from '@supabase/auth-helpers-react';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
 import Link from 'next/link';
+import { Footer } from '@/components/footer';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -75,9 +76,10 @@ export default function RootLayout({
               </Sheet>
               <div className="flex-1">
                 <Navbar />
-                <main className="container mx-auto p-4">
+                <main className="container mx-auto p-4 flex-1">
                   {children}
                 </main>
+                <Footer />
               </div>
             </div>
           </ThemeProvider>

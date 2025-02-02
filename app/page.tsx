@@ -35,7 +35,7 @@ interface Todo {
   evidence: string;
   group_id: number | null;
   verified: boolean;
-  verificationPending: boolean;
+  verificationpending: boolean;
 }
 
 interface TaskGroup {
@@ -173,7 +173,7 @@ export default function Home() {
         .from('todos')
         .update({
           evidence: publicUrl,
-          verificationPending: true
+          verificationpending: true
         })
         .eq('id', id);
 
@@ -240,7 +240,7 @@ export default function Home() {
 
   const handleSubmitEvidence = async (id: string) => {
     await updateTodo(id, { 
-      verificationPending: true,
+      verificationpending: true,
       completed: true 
     });
     setSelectedTaskId(null);
@@ -270,13 +270,13 @@ export default function Home() {
       todo.completed && !todo.evidence
     ),
     inReview: filteredTodos.filter(todo => 
-      todo.completed && todo.evidence && todo.verificationPending && !todo.verified
+      todo.completed && todo.evidence && todo.verificationpending && !todo.verified
     ),
     approved: filteredTodos.filter(todo => todo.verified),
     rejected: filteredTodos.filter(todo => 
       todo.completed && 
       todo.evidence && 
-      todo.verificationPending === false &&
+      todo.verificationpending === false &&
       !todo.verified
     )
   };
@@ -292,7 +292,7 @@ export default function Home() {
         <CardContent>
           <Tabs defaultValue="all" className="w-full">
             <div className="flex items-center justify-between mb-4">
-              <TabsList>
+              <TabsList className="bg-secondary text-foreground">
                 <TabsTrigger 
                   value="all" 
                   onClick={() => setSelectedGroup(null)}

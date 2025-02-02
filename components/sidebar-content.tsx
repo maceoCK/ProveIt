@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { PanelLeft, ListTodo, User } from "lucide-react";
+import { PanelLeft, ListTodo, User, Info } from "lucide-react";
 import { SidebarHeader, SidebarMenuButton } from "@/components/ui/sidebar";
 
 export function SidebarContent({
@@ -61,6 +61,15 @@ export function SidebarContent({
             ))}
           </div>
         </div>
+
+        <SidebarMenuButton asChild>
+          <Link href="/about" className="gap-3">
+            <Info className="h-4 w-4" />
+            <span className={pathname === "/about" ? "border-b-2 border-primary" : ""}>
+              About
+            </span>
+          </Link>
+        </SidebarMenuButton>
 
         {user?.email === 'maceo.ck@gmail.com' && (
           <SidebarMenuButton asChild>

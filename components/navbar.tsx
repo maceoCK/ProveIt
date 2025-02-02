@@ -2,7 +2,7 @@
 
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
-import { LogIn, LogOut, Sun, User } from "lucide-react";
+import { LogIn, LogOut, Sun, User, Info } from "lucide-react";
 import Link from "next/link";
 import { useSupabaseClient, useUser } from '@supabase/auth-helpers-react';
 import UserMenu from "@/components/UserMenu";
@@ -55,6 +55,13 @@ export function Navbar() {
               </Button>
             </Link>
           )}
+
+          <Link href="/about">
+            <Button variant="ghost">
+              <Info className="h-5 w-5 mr-2" />
+              About
+            </Button>
+          </Link>
         </div>
       </div>
     </nav>

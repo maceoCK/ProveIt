@@ -37,7 +37,7 @@ export default function AdminPage() {
       const { data, error } = await supabase
         .from('todos')
         .select('*')
-        .eq('verificationPending', true)
+        .eq('verificationpending', true)
         .eq('completed', true);
       
       if (data) {
@@ -57,7 +57,7 @@ export default function AdminPage() {
       .from('todos')
       .update({ 
         verified,
-        verificationPending: false
+        verificationpending: false
       })
       .eq('id', todoId);
 
