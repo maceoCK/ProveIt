@@ -15,6 +15,8 @@ export default function AuthPage() {
   const supabase = useSupabaseClient();
   const router = useRouter();
   const user = useUser();
+  const [error, setError] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   useEffect(() => {
     if (user) {
@@ -30,9 +32,25 @@ export default function AuthPage() {
   if (user) {
     return null;
   }
+  //!
+  const validatePassword = (password: string) => {
+    const regex = /^(?=.*\d)(?=.*[a-zA-Z]).{6,}$/;
+    return regex.test(password);
+  };
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    //!
+    if (isSignUp && password !== confirmPassword) {
+      setError("Passwords must match");
+      return;
+    }
+    if (!validatePassword(password)) {
+      setError("Password must be at least 6 characters long and contain at least one number and one letter");
+      return;
+    }
+    //!
     
     try {
       if (isSignUp) {
@@ -76,6 +94,15 @@ export default function AuthPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
+            {isSignUp && (
+              <Input
+                type="password"
+                placeholder="Confirm Password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+              />
+            )}
             <Button type="submit" className="w-full">
               {isSignUp ? "Sign Up" : "Sign In"}
             </Button>
