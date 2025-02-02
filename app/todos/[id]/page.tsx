@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { CheckCircle2, Timer, DollarSign } from "lucide-react";
+import { Dialog, DialogTrigger, DialogContent } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -55,11 +57,24 @@ export default async function TodoPage({ params }: { params: { id: string } }) {
           {todo.evidence && (
             <div className="mt-4">
               <h3 className="font-semibold mb-2">Evidence:</h3>
-              <img 
-                src={todo.evidence} 
-                alt="Task evidence"
-                className="max-w-full h-auto rounded-lg"
-              />
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="link" className="p-0 h-auto">
+                    <img 
+                      src={todo.evidence} 
+                      alt="Task evidence"
+                      className="max-w-full h-40 rounded-lg cursor-pointer"
+                    />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-[90vw] h-[90vh]">
+                  <img 
+                    src={todo.evidence} 
+                    alt="Evidence Full View" 
+                    className="object-contain w-full h-full"
+                  />
+                </DialogContent>
+              </Dialog>
             </div>
           )}
         </div>

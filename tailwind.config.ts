@@ -19,8 +19,14 @@ const config: Config = {
   			sm: 'calc(var(--radius) - 4px)'
   		},
   		colors: {
-  			background: 'hsl(var(--background))',
-  			foreground: 'hsl(var(--foreground))',
+  			background: {
+  				DEFAULT: '#FFF9ED',
+  				dark: '#000612',
+  			},
+  			foreground: {
+  				DEFAULT: '#0D161B',
+  				dark: '#F2E9E4',
+  			},
   			card: {
   				DEFAULT: 'hsl(var(--card))',
   				foreground: 'hsl(var(--card-foreground))'
@@ -30,11 +36,13 @@ const config: Config = {
   				foreground: 'hsl(var(--popover-foreground))'
   			},
   			primary: {
-  				DEFAULT: 'hsl(var(--primary))',
+  				DEFAULT: '#365258',
+  				dark: '#514A69',
   				foreground: 'hsl(var(--primary-foreground))'
   			},
   			secondary: {
-  				DEFAULT: 'hsl(var(--secondary))',
+  				DEFAULT: '#657367',
+  				dark: '#9A8C98',
   				foreground: 'hsl(var(--secondary-foreground))'
   			},
   			muted: {
@@ -42,7 +50,8 @@ const config: Config = {
   				foreground: 'hsl(var(--muted-foreground))'
   			},
   			accent: {
-  				DEFAULT: 'hsl(var(--accent))',
+  				DEFAULT: '#AEB596',
+  				dark: '#C9ADA7',
   				foreground: 'hsl(var(--accent-foreground))'
   			},
   			destructive: {

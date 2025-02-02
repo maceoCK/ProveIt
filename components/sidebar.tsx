@@ -7,7 +7,7 @@ import {
   SidebarSeparator,
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import { Moon, Sun, LogOut, User } from "lucide-react";
+import {  LogOut, User } from "lucide-react";
 
 export function SidebarNav({ 
   children,
@@ -31,11 +31,6 @@ export function SidebarNav({
           <SidebarSeparator className="mb-4" />
           <div className="space-y-2">
             <SidebarMenuButton onClick={toggleTheme}>
-              {theme === "dark" ? (
-                <Sun className="h-4 w-4 mr-3" />
-              ) : (
-                <Moon className="h-4 w-4 mr-3" />
-              )}
               Toggle Theme
             </SidebarMenuButton>
 

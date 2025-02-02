@@ -2,7 +2,6 @@
 
 import './globals.css';
 import { Inter } from 'next/font/google';
-import { Metadata } from 'next';
 import { ThemeProvider } from "next-themes";
 import { Navbar } from '@/components/navbar';
 import { useState, useEffect } from 'react';
@@ -43,7 +42,7 @@ export default function RootLayout({
       <html lang="en">
         <head />
         <body className={inter.className}>
-          <div className="min-h-screen bg-background" />
+          <div className="min-h-screen bg-background text-foreground" />
         </body>
       </html>
     );
@@ -53,6 +52,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head />
       <body className={inter.className}>
+        <div className="min-h-screen bg-background text-foreground dark" >
         <SessionContextProvider supabaseClient={supabase}>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
             <div className="flex min-h-screen">
@@ -82,6 +82,7 @@ export default function RootLayout({
             </div>
           </ThemeProvider>
         </SessionContextProvider>
+        </div>
       </body>
     </html>
   );

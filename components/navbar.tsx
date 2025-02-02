@@ -2,9 +2,10 @@
 
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
-import { Moon, Sun, LogIn, LogOut, User } from "lucide-react";
+import { LogIn, LogOut, Sun, User } from "lucide-react";
 import Link from "next/link";
 import { useSupabaseClient, useUser } from '@supabase/auth-helpers-react';
+import UserMenu from "@/components/UserMenu";
 
 export function Navbar() {
   const { theme, setTheme } = useTheme();
@@ -35,11 +36,6 @@ export function Navbar() {
             onClick={toggleTheme}
             className="mr-4"
           >
-            {theme === "dark" ? (
-              <Sun className="h-5 w-5" />
-            ) : (
-              <Moon className="h-5 w-5" />
-            )}
           </Button>
 
           {user ? (
@@ -49,24 +45,7 @@ export function Navbar() {
                   <Button variant="outline">Admin Panel</Button>
                 </Link>
               )}
-              <Button variant="ghost" onClick={handleSignOut}>
-                <LogOut className="h-5 w-5 mr-2" />
-                Sign Out
-              </Button>
-              {user && (
-                <Link href="/profile" className="flex items-center gap-2">
-                  {user.user_metadata.avatar_url ? (
-                    <img 
-                      src={user.user_metadata.avatar_url} 
-                      className="w-8 h-8 rounded-full"
-                      alt="Profile"
-                    />
-                  ) : (
-                    <User className="h-5 w-5" />
-                  )}
-                  <span>{user.user_metadata.username || user.email}</span>
-                </Link>
-              )}
+              <UserMenu />
             </>
           ) : (
             <Link href="/auth">

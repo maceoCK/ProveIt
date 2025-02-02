@@ -5,7 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useSupabaseClient, useUser } from '@supabase/auth-helpers-react';
 import { useRouter } from 'next/navigation';
-import { CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, XCircle, Timer } from "lucide-react";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 
 interface Todo {
   id: string;
@@ -15,6 +17,8 @@ interface Todo {
   evidence: string;
   user_id: string;
   verified: boolean;
+  verificationpending: boolean;
+  completed: boolean;
 }
 
 export default function AdminPage() {
@@ -33,8 +37,8 @@ export default function AdminPage() {
       const { data, error } = await supabase
         .from('todos')
         .select('*')
-        .eq('completed', true)
-        .eq('verified', false);
+        .eq('verificationPending', true)
+        .eq('completed', true);
       
       if (data) {
         setTodos(data);
@@ -51,7 +55,10 @@ export default function AdminPage() {
   const handleVerification = async (todoId: string, verified: boolean) => {
     const { error } = await supabase
       .from('todos')
-      .update({ verified })
+      .update({ 
+        verified,
+        verificationPending: false
+      })
       .eq('id', todoId);
 
     if (!error) {
@@ -65,7 +72,7 @@ export default function AdminPage() {
 
   return (
     <div className="container mx-auto py-8">
-      <Card className="max-w-4xl mx-auto">
+      <Card className="max-w-4xl mx-auto bg-background text-foreground">
         <CardHeader>
           <CardTitle className="text-2xl font-bold">
             Evidence Verification Panel
@@ -74,21 +81,47 @@ export default function AdminPage() {
         <CardContent>
           <div className="space-y-4">
             {todos.map((todo) => (
-              <Card key={todo.id} className="p-4">
+              <Card key={todo.id} className="p-4 bg-background text-foreground">
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-xl font-semibold">{todo.task}</h3>
                     <p className="text-muted-foreground">
                       Stake: ${todo.stake.toFixed(2)}
                     </p>
-                    <a
-                      href={todo.evidence}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-500 hover:underline hover:cursor-pointer"
-                    >
-                      View Evidence
-                    </a>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="link" className="text-blue-500 hover:cursor-pointer">
+                          View Evidence
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-[90vw] h-[90vh]">
+                        <img 
+                          src={todo.evidence} 
+                          alt="Evidence" 
+                          className="object-contain w-full h-full"
+                        />
+                      </DialogContent>
+                    </Dialog>
+                    {todo.completed ? (
+                      <>
+                        {todo.verified ? (
+                          <Badge variant="default" className="bg-green-500">
+                            <CheckCircle2 className="w-4 h-4 mr-1" />
+                            Approved
+                          </Badge>
+                        ) : todo.verificationpending === false ? (
+                          <Badge variant="default" className="bg-red-500">
+                            <XCircle className="w-4 h-4 mr-1" />
+                            Rejected
+                          </Badge>
+                        ) : (
+                          <Badge variant="default" className="bg-blue-500">
+                            <Timer className="w-4 h-4 mr-1" />
+                            In Review
+                          </Badge>
+                        )}
+                      </>
+                    ) : null}
                   </div>
                   <div className="flex gap-2">
                     <Button

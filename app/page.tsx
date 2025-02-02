@@ -24,6 +24,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useSupabaseClient, useUser } from '@supabase/auth-helpers-react';
 import { useRouter } from 'next/navigation';
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 
 interface Todo {
   id: string;
@@ -34,7 +35,7 @@ interface Todo {
   evidence: string;
   group_id: number | null;
   verified: boolean;
-  verificationPending?: boolean;
+  verificationPending: boolean;
 }
 
 interface TaskGroup {
@@ -57,13 +58,18 @@ export default function Home() {
   const [openAddTask, setOpenAddTask] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   const supabase = useSupabaseClient();
   const user = useUser();
   const router = useRouter();
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      router.push('/auth');
+      return;
+    }
 
     const fetchData = async () => {
       // Fetch task groups
@@ -147,37 +153,39 @@ export default function Home() {
 
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${id}.${fileExt}`;
+      const fileName = `${id}-${Date.now()}.${fileExt}`;
       const filePath = `${user.id}/${fileName}`;
 
+      // Upload to Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('evidence')
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
+      // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('evidence')
         .getPublicUrl(filePath);
 
+      // Update todo record
       const { error: updateError } = await supabase
         .from('todos')
         .update({
-          completed: true,
-          evidence: publicUrl
+          evidence: publicUrl,
+          verificationPending: true
         })
         .eq('id', id);
 
       if (updateError) throw updateError;
 
-      setTodos(todos.map(todo =>
-        todo.id === id
-          ? { ...todo, completed: true, evidence: publicUrl }
-          : todo
+      // Update local state
+      setTodos(todos.map(todo => 
+        todo.id === id ? { ...todo, evidence: publicUrl } : todo
       ));
-      setSelectedTodo(null);
     } catch (error) {
-      console.error('Error uploading file:', error);
+      console.error('Upload failed:', error);
+      alert('File upload failed. Please try again.');
     } finally {
       setUploading(false);
     }
@@ -230,9 +238,12 @@ export default function Home() {
     }
   };
 
-  const handleSubmitEvidence = (id: string) => {
+  const handleSubmitEvidence = async (id: string) => {
+    await updateTodo(id, { 
+      verificationPending: true,
+      completed: true 
+    });
     setSelectedTaskId(null);
-    updateTodo(id, { verificationPending: true });
   };
 
   if (!user) {
@@ -249,6 +260,9 @@ export default function Home() {
 
   // Updated task sections organization
   const taskSections = {
+    currentTasks: filteredTodos.filter(todo => 
+      !todo.completed && !isPast(new Date(todo.deadline))
+    ),
     pastDue: filteredTodos.filter(todo => 
       !todo.completed && isPast(new Date(todo.deadline))
     ),
@@ -260,13 +274,16 @@ export default function Home() {
     ),
     approved: filteredTodos.filter(todo => todo.verified),
     rejected: filteredTodos.filter(todo => 
-      todo.completed && todo.evidence && !todo.verificationPending && !todo.verified
+      todo.completed && 
+      todo.evidence && 
+      todo.verificationPending === false &&
+      !todo.verified
     )
   };
 
   return (
     <div className="container mx-auto py-8">
-      <Card className="max-w-4xl mx-auto">
+      <Card className="max-w-4xl mx-auto bg-background text-foreground">
         <CardHeader>
           <CardTitle className="text-3xl font-bold text-center">
             ProveIt: Put your money where your mouth is
@@ -314,7 +331,7 @@ export default function Home() {
                     New Group
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[400px] p-4">
+                <PopoverContent className="w-[400px] p-4 text-foreground">
                   <div className="flex gap-2">
                     <Input
                       placeholder="Group name"
@@ -343,111 +360,139 @@ export default function Home() {
                 <div className="space-y-8">
                   {Object.entries(taskSections).map(([sectionKey, sectionTasks]) => (
                     <div key={sectionKey} className="border rounded-lg p-4 mb-4">
-                      <h2 className="text-xl font-bold mb-4 capitalize">
-                        {sectionKey.replace(/([A-Z])/g, ' $1')}
-                      </h2>
+                      <div 
+                        className="flex items-center justify-between cursor-pointer" 
+                        onClick={() => setCollapsedSections(prev => ({
+                          ...prev,
+                          [sectionKey]: !prev[sectionKey]
+                        }))}
+                      >
+                        <h2 className="text-xl font-bold capitalize">
+                          {sectionKey.replace(/([A-Z])/g, ' $1')}
+                          <span className="text-muted-foreground ml-2">
+                            ({sectionTasks.length})
+                          </span>
+                        </h2>
+                        <ChevronDown className={`w-5 h-5 transition-transform ${
+                          collapsedSections[sectionKey] ? 'rotate-180' : ''
+                        }`} />
+                      </div>
                       
-                      {sectionTasks.length === 0 ? (
-                        <div className="text-center p-6 text-muted-foreground">
-                          {sectionKey === 'approved' ? "No approved tasks yet - keep going! 🌟" : 
-                           sectionKey === 'pastDue' ? "All tasks up to date! 🎉" : 
-                           "Nothing here yet :)"}
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {sectionTasks.map((todo) => (
-                            <div key={todo.id} className="p-4 border rounded-md">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <h3 className={cn("text-xl font-semibold", 
-                                    todo.completed && "line-through text-muted-foreground"
-                                  )}>
-                                    {todo.task}
-                                  </h3>
-                                  <div className="flex gap-4 mt-2">
-                                    {groups.find(g => g.id === todo.group_id)?.name && (
-                                      <Badge variant="outline" className="text-muted-foreground">
-                                        {groups.find(g => g.id === todo.group_id)?.name}
-                                      </Badge>
-                                    )}
-                                    <div className="flex items-center text-muted-foreground">
-                                      <Timer className="w-4 h-4 mr-1" />
-                                      {format(new Date(todo.deadline), "PPP")}
+                      {!collapsedSections[sectionKey] && (
+                        <div className="mt-4">
+                          {sectionTasks.length === 0 ? (
+                            <div className="text-center p-6 text-muted-foreground">
+                              {sectionKey === 'approved' ? "No approved tasks yet - keep going! 🌟" : 
+                              sectionKey === 'pastDue' ? "All tasks up to date! 🎉" : 
+                              sectionKey === 'currentTasks' ? "No current tasks" :
+                              "Nothing here yet :)"}
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              {sectionTasks.map((todo) => (
+                                <div key={todo.id} className="p-4 border rounded-md">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex-1">
+                                      <h3 className={cn("text-xl font-semibold", 
+                                        todo.completed && "line-through text-muted-foreground"
+                                      )}>
+                                        {todo.task}
+                                      </h3>
+                                      <div className="flex gap-4 mt-2">
+                                        {groups.find(g => g.id === todo.group_id)?.name && (
+                                          <Badge variant="outline" className="text-muted-foreground">
+                                            {groups.find(g => g.id === todo.group_id)?.name}
+                                          </Badge>
+                                        )}
+                                        <div className="flex items-center text-muted-foreground">
+                                          <Timer className="w-4 h-4 mr-1" />
+                                          {format(new Date(todo.deadline), "PPP")}
+                                        </div>
+                                        <div className="flex items-center text-muted-foreground">
+                                          <DollarSign className="w-4 h-4 mr-1" />
+                                          {todo.stake.toFixed(2)}
+                                        </div>
+                                      </div>
                                     </div>
-                                    <div className="flex items-center text-muted-foreground">
-                                      <DollarSign className="w-4 h-4 mr-1" />
-                                      {todo.stake.toFixed(2)}
+                                    <div className="flex items-center gap-2">
+                                      {sectionKey === 'currentTasks' && (
+                                        <>
+                                          <Button 
+                                            onClick={() => {
+                                              updateTodo(todo.id, { completed: true });
+                                              setSelectedTaskId(todo.id);
+                                            }}
+                                            className="bg-background text-foreground hover:bg-primary/90 outline-dashed"
+                                          >
+                                            Mark Complete
+                                          </Button>
+                                          <Button
+                                            variant="destructive"
+                                            size="icon"
+                                            disabled={isPast(new Date(todo.deadline))}
+                                            onClick={() => deleteTodo(todo.id)}
+                                          >
+                                            <Trash2 className="w-4 h-4" />
+                                          </Button>
+                                        </>
+                                      )}
+
+                                      {sectionKey === 'awaitingEvidence' && (
+                                        <div className="flex items-center gap-2">
+                                          <label className="cursor-pointer">
+                                            <Input
+                                              type="file"
+                                              className="hidden"
+                                              onChange={(e) => handleFileUpload(todo.id, e.target.files?.[0]!)}
+                                            />
+                                            <Button variant="outline" size="icon" asChild>
+                                              <div>
+                                                <Upload className="w-4 h-4" />
+                                              </div>
+                                            </Button>
+                                          </label>
+                                          <Button 
+                                            onClick={() => handleSubmitEvidence(todo.id)}
+                                            disabled={!todo.evidence}
+                                          >
+                                            Submit
+                                          </Button>
+                                        </div>
+                                      )}
+
+                                      {(sectionKey === 'approved' || sectionKey === 'inReview' || sectionKey === 'rejected') && (
+                                        <Dialog>
+                                          <DialogTrigger asChild>
+                                            <Button variant="link" className="hover:cursor-pointer text-foreground bg-background">
+                                              View Evidence
+                                            </Button>
+                                          </DialogTrigger>
+                                          <DialogContent className="max-w-[90vw] h-[90vh]">
+                                            <img 
+                                              src={todo.evidence} 
+                                              alt="Evidence" 
+                                              className="object-contain w-full h-full"
+                                            />
+                                          </DialogContent>
+                                        </Dialog>
+                                      )}
+
+                                      {sectionKey === 'pastDue' && (
+                                        <Button
+                                          variant="destructive"
+                                          size="icon"
+                                          disabled={isPast(new Date(todo.deadline))}
+                                          onClick={() => deleteTodo(todo.id)}
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                      )}
                                     </div>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  {sectionKey === 'currentTasks' && (
-                                    <>
-                                      <Button 
-                                        onClick={() => {
-                                          updateTodo(todo.id, { completed: true });
-                                          setSelectedTaskId(todo.id);
-                                        }}
-                                      >
-                                        Mark Complete
-                                      </Button>
-                                      <Button
-                                        variant="destructive"
-                                        size="icon"
-                                        onClick={() => deleteTodo(todo.id)}
-                                      >
-                                        <Trash2 className="w-4 h-4" />
-                                      </Button>
-                                    </>
-                                  )}
-
-                                  {sectionKey === 'awaitingEvidence' && (
-                                    <div className="flex items-center gap-2">
-                                      <label className="cursor-pointer">
-                                        <Input
-                                          type="file"
-                                          className="hidden"
-                                          onChange={(e) => handleFileUpload(todo.id, e.target.files?.[0]!)}
-                                        />
-                                        <Button variant="outline" size="icon" asChild>
-                                          <div>
-                                            <Upload className="w-4 h-4" />
-                                          </div>
-                                        </Button>
-                                      </label>
-                                      <Button 
-                                        onClick={() => handleSubmitEvidence(todo.id)}
-                                        disabled={!todo.evidence}
-                                      >
-                                        Submit
-                                      </Button>
-                                    </div>
-                                  )}
-
-                                  {(sectionKey === 'approved' || sectionKey === 'inReview' || sectionKey === 'rejected') && (
-                                    <a
-                                      href={todo.evidence}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-blue-500 hover:underline hover:cursor-pointer"
-                                    >
-                                      View Evidence
-                                    </a>
-                                  )}
-
-                                  {sectionKey === 'pastDue' && (
-                                    <Button
-                                      variant="destructive"
-                                      size="icon"
-                                      onClick={() => deleteTodo(todo.id)}
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </Button>
-                                  )}
-                                </div>
-                              </div>
+                              ))}
                             </div>
-                          ))}
+                          )}
                         </div>
                       )}
                     </div>
@@ -463,15 +508,22 @@ export default function Home() {
                       
                       return (
                         <div key={sectionKey} className="border rounded-lg p-4 mb-4">
-                          <div className="flex items-center justify-between cursor-pointer" 
-                               onClick={() => setCollapsedSections(prev => ({
-                                 ...prev,
-                                 [sectionKey]: !prev[sectionKey]
-                               }))}>
+                          <div 
+                            className="flex items-center justify-between cursor-pointer" 
+                            onClick={() => setCollapsedSections(prev => ({
+                              ...prev,
+                              [sectionKey]: !prev[sectionKey]
+                            }))}
+                          >
                             <h2 className="text-xl font-bold capitalize">
                               {sectionKey.replace(/([A-Z])/g, ' $1')}
+                              <span className="text-muted-foreground ml-2">
+                                ({groupTasks.length})
+                              </span>
                             </h2>
-                            <ChevronDown className={`w-5 h-5 transition-transform ${collapsedSections[sectionKey] ? 'rotate-180' : ''}`} />
+                            <ChevronDown className={`w-5 h-5 transition-transform ${
+                              collapsedSections[sectionKey] ? 'rotate-180' : ''
+                            }`} />
                           </div>
                           
                           {!collapsedSections[sectionKey] && (
@@ -513,12 +565,14 @@ export default function Home() {
                                                   updateTodo(todo.id, { completed: true });
                                                   setSelectedTaskId(todo.id);
                                                 }}
+                                                className="bg-background text-foreground hover:bg-primary/90"
                                               >
                                                 Mark Complete
                                               </Button>
                                               <Button
                                                 variant="destructive"
                                                 size="icon"
+                                                disabled={isPast(new Date(todo.deadline))}
                                                 onClick={() => deleteTodo(todo.id)}
                                               >
                                                 <Trash2 className="w-4 h-4" />
@@ -550,20 +604,27 @@ export default function Home() {
                                           )}
 
                                           {(sectionKey === 'approved' || sectionKey === 'inReview' || sectionKey === 'rejected') && (
-                                            <a
-                                              href={todo.evidence}
-                                              target="_blank"
-                                              rel="noopener noreferrer"
-                                              className="text-blue-500 hover:underline hover:cursor-pointer"
-                                            >
-                                              View Evidence
-                                            </a>
+                                            <Dialog>
+                                              <DialogTrigger asChild>
+                                                <Button variant="link" className="hover:cursor-pointer">
+                                                  View Evidence
+                                                </Button>
+                                              </DialogTrigger>
+                                              <DialogContent className="max-w-[90vw] h-[90vh]">
+                                                <img 
+                                                  src={todo.evidence} 
+                                                  alt="Evidence" 
+                                                  className="object-contain w-full h-full"
+                                                />
+                                              </DialogContent>
+                                            </Dialog>
                                           )}
 
                                           {sectionKey === 'pastDue' && (
                                             <Button
                                               variant="destructive"
                                               size="icon"
+                                              disabled={isPast(new Date(todo.deadline))}
                                               onClick={() => deleteTodo(todo.id)}
                                             >
                                               <Trash2 className="w-4 h-4" />
@@ -590,13 +651,13 @@ export default function Home() {
       <Popover open={openAddTask} onOpenChange={setOpenAddTask}>
         <PopoverTrigger asChild>
           <Button
-            className="fixed bottom-8 right-8 h-16 w-16 rounded-full shadow-lg"
+            className="fixed bottom-8 right-8 h-16 w-16 rounded-full shadow-lg bg-primary text-primary-foreground hover:bg-primary/90"
             size="icon"
           >
             <Plus className="h-8 w-8" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[400px] p-4">
+        <PopoverContent className="w-[400px] p-4 text-foreground">
           <div className="space-y-4">
             <Input
               placeholder="What do you need to do?"
@@ -696,14 +757,20 @@ function TodoCard({
                 <CheckCircle2 className="w-4 h-4 mr-1" />
                 Completed
               </Badge>
-              <a
-                href={todo.evidence}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-500 hover:underline hover:cursor-pointer"
-              >
-                View Evidence
-              </a>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="link" className="hover:cursor-pointer">
+                    View Evidence
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-[90vw] h-[90vh]">
+                  <img 
+                    src={todo.evidence} 
+                    alt="Evidence" 
+                    className="object-contain w-full h-full"
+                  />
+                </DialogContent>
+              </Dialog>
             </>
           ) : (
             <>
@@ -736,10 +803,16 @@ function TodoCard({
           <Button
             variant="destructive"
             size="icon"
+            disabled={isPast(new Date(todo.deadline))}
             onClick={() => onDelete(todo.id)}
           >
             <Trash2 className="w-4 h-4" />
           </Button>
+          {isPast(new Date(todo.deadline)) && (
+            <span className="text-sm text-muted-foreground">
+              Can't delete past due tasks
+            </span>
+          )}
         </div>
       </div>
     </Card>
