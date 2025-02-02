@@ -85,7 +85,7 @@ export default function AdminPage() {
                       href={todo.evidence}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-500 hover:underline"
+                      className="text-blue-500 hover:underline hover:cursor-pointer"
                     >
                       View Evidence
                     </a>

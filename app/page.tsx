@@ -8,7 +8,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, isPast } from "date-fns";
 import { 
   Calendar as CalendarIcon, 
   CheckCircle2, 
@@ -18,7 +18,8 @@ import {
   Upload,
   Plus,
   FolderPlus,
-  X
+  X,
+  ChevronDown
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useSupabaseClient, useUser } from '@supabase/auth-helpers-react';
@@ -32,6 +33,8 @@ interface Todo {
   completed: boolean;
   evidence: string;
   group_id: number | null;
+  verified: boolean;
+  verificationPending?: boolean;
 }
 
 interface TaskGroup {
@@ -52,6 +55,8 @@ export default function Home() {
   const [newGroupName, setNewGroupName] = useState("");
   const [openAddGroup, setOpenAddGroup] = useState(false);
   const [openAddTask, setOpenAddTask] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   
   const supabase = useSupabaseClient();
   const user = useUser();
@@ -72,13 +77,12 @@ export default function Home() {
         setGroups(groupsData);
       }
 
-      // Fetch todos
+      // Fetch todos (updated to get all todos)
       const { data: todosData } = await supabase
         .from('todos')
         .select('*')
         .eq('user_id', user.id)
-        .eq('deleted', false)
-        .eq('completed', false);
+        .eq('deleted', false);
       
       if (todosData) {
         setTodos(todosData);
@@ -213,6 +217,24 @@ export default function Home() {
     }
   };
 
+  const updateTodo = async (id: string, updates: Partial<Todo>) => {
+    const { error } = await supabase
+      .from('todos')
+      .update(updates)
+      .eq('id', id);
+
+    if (!error) {
+      setTodos(todos.map(todo => 
+        todo.id === id ? { ...todo, ...updates } : todo
+      ));
+    }
+  };
+
+  const handleSubmitEvidence = (id: string) => {
+    setSelectedTaskId(null);
+    updateTodo(id, { verificationPending: true });
+  };
+
   if (!user) {
     if (typeof window !== 'undefined') {
       router.push('/auth');
@@ -225,12 +247,29 @@ export default function Home() {
     (selectedGroup === null || todo.group_id === selectedGroup)
   );
 
+  // Updated task sections organization
+  const taskSections = {
+    pastDue: filteredTodos.filter(todo => 
+      !todo.completed && isPast(new Date(todo.deadline))
+    ),
+    awaitingEvidence: filteredTodos.filter(todo => 
+      todo.completed && !todo.evidence
+    ),
+    inReview: filteredTodos.filter(todo => 
+      todo.completed && todo.evidence && todo.verificationPending && !todo.verified
+    ),
+    approved: filteredTodos.filter(todo => todo.verified),
+    rejected: filteredTodos.filter(todo => 
+      todo.completed && todo.evidence && !todo.verificationPending && !todo.verified
+    )
+  };
+
   return (
     <div className="container mx-auto py-8">
       <Card className="max-w-4xl mx-auto">
         <CardHeader>
           <CardTitle className="text-3xl font-bold text-center">
-            Todo List with Stakes 💰
+            ProveIt: Put your money where your mouth is
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -301,38 +340,247 @@ export default function Home() {
               </div>
 
               <TabsContent value="all" className="space-y-4 mt-4">
-                {filteredTodos.map((todo) => (
-                  <TodoCard
-                    key={todo.id}
-                    todo={todo}
-                    onDelete={deleteTodo}
-                    onUpload={handleFileUpload}
-                    selectedTodo={selectedTodo}
-                    setSelectedTodo={setSelectedTodo}
-                    uploading={uploading}
-                    router={router}
-                    groups={groups}
-                  />
-                ))}
+                <div className="space-y-8">
+                  {Object.entries(taskSections).map(([sectionKey, sectionTasks]) => (
+                    <div key={sectionKey} className="border rounded-lg p-4 mb-4">
+                      <h2 className="text-xl font-bold mb-4 capitalize">
+                        {sectionKey.replace(/([A-Z])/g, ' $1')}
+                      </h2>
+                      
+                      {sectionTasks.length === 0 ? (
+                        <div className="text-center p-6 text-muted-foreground">
+                          {sectionKey === 'approved' ? "No approved tasks yet - keep going! 🌟" : 
+                           sectionKey === 'pastDue' ? "All tasks up to date! 🎉" : 
+                           "Nothing here yet :)"}
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {sectionTasks.map((todo) => (
+                            <div key={todo.id} className="p-4 border rounded-md">
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <h3 className={cn("text-xl font-semibold", 
+                                    todo.completed && "line-through text-muted-foreground"
+                                  )}>
+                                    {todo.task}
+                                  </h3>
+                                  <div className="flex gap-4 mt-2">
+                                    {groups.find(g => g.id === todo.group_id)?.name && (
+                                      <Badge variant="outline" className="text-muted-foreground">
+                                        {groups.find(g => g.id === todo.group_id)?.name}
+                                      </Badge>
+                                    )}
+                                    <div className="flex items-center text-muted-foreground">
+                                      <Timer className="w-4 h-4 mr-1" />
+                                      {format(new Date(todo.deadline), "PPP")}
+                                    </div>
+                                    <div className="flex items-center text-muted-foreground">
+                                      <DollarSign className="w-4 h-4 mr-1" />
+                                      {todo.stake.toFixed(2)}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {sectionKey === 'currentTasks' && (
+                                    <>
+                                      <Button 
+                                        onClick={() => {
+                                          updateTodo(todo.id, { completed: true });
+                                          setSelectedTaskId(todo.id);
+                                        }}
+                                      >
+                                        Mark Complete
+                                      </Button>
+                                      <Button
+                                        variant="destructive"
+                                        size="icon"
+                                        onClick={() => deleteTodo(todo.id)}
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
+                                    </>
+                                  )}
+
+                                  {sectionKey === 'awaitingEvidence' && (
+                                    <div className="flex items-center gap-2">
+                                      <label className="cursor-pointer">
+                                        <Input
+                                          type="file"
+                                          className="hidden"
+                                          onChange={(e) => handleFileUpload(todo.id, e.target.files?.[0]!)}
+                                        />
+                                        <Button variant="outline" size="icon" asChild>
+                                          <div>
+                                            <Upload className="w-4 h-4" />
+                                          </div>
+                                        </Button>
+                                      </label>
+                                      <Button 
+                                        onClick={() => handleSubmitEvidence(todo.id)}
+                                        disabled={!todo.evidence}
+                                      >
+                                        Submit
+                                      </Button>
+                                    </div>
+                                  )}
+
+                                  {(sectionKey === 'approved' || sectionKey === 'inReview' || sectionKey === 'rejected') && (
+                                    <a
+                                      href={todo.evidence}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-blue-500 hover:underline hover:cursor-pointer"
+                                    >
+                                      View Evidence
+                                    </a>
+                                  )}
+
+                                  {sectionKey === 'pastDue' && (
+                                    <Button
+                                      variant="destructive"
+                                      size="icon"
+                                      onClick={() => deleteTodo(todo.id)}
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </TabsContent>
 
               {groups.map(group => (
                 <TabsContent key={group.id} value={group.id.toString()} className="space-y-4 mt-4">
-                  {filteredTodos
-                    .filter(todo => todo.group_id === group.id)
-                    .map((todo) => (
-                      <TodoCard
-                        key={todo.id}
-                        todo={todo}
-                        onDelete={deleteTodo}
-                        onUpload={handleFileUpload}
-                        selectedTodo={selectedTodo}
-                        setSelectedTodo={setSelectedTodo}
-                        uploading={uploading}
-                        router={router}
-                        groups={groups}
-                      />
-                    ))}
+                  <div className="space-y-8">
+                    {Object.entries(taskSections).map(([sectionKey, sectionTasks]) => {
+                      const groupTasks = sectionTasks.filter(todo => todo.group_id === group.id);
+                      
+                      return (
+                        <div key={sectionKey} className="border rounded-lg p-4 mb-4">
+                          <div className="flex items-center justify-between cursor-pointer" 
+                               onClick={() => setCollapsedSections(prev => ({
+                                 ...prev,
+                                 [sectionKey]: !prev[sectionKey]
+                               }))}>
+                            <h2 className="text-xl font-bold capitalize">
+                              {sectionKey.replace(/([A-Z])/g, ' $1')}
+                            </h2>
+                            <ChevronDown className={`w-5 h-5 transition-transform ${collapsedSections[sectionKey] ? 'rotate-180' : ''}`} />
+                          </div>
+                          
+                          {!collapsedSections[sectionKey] && (
+                            <div className="mt-4">
+                              {groupTasks.length === 0 ? (
+                                <div className="text-center p-6 text-muted-foreground">
+                                  {sectionKey === 'approved' ? "No approved tasks yet - keep going! 🌟" : 
+                                   sectionKey === 'pastDue' ? "All tasks up to date! 🎉" : 
+                                   sectionKey === 'currentTasks' ? "No current tasks in this group" :
+                                   "Nothing here yet :)"}
+                                </div>
+                              ) : (
+                                <div className="space-y-2">
+                                  {groupTasks.map((todo) => (
+                                    <div key={todo.id} className="p-4 border rounded-md">
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex-1">
+                                          <h3 className={cn("text-xl font-semibold", 
+                                            todo.completed && "line-through text-muted-foreground"
+                                          )}>
+                                            {todo.task}
+                                          </h3>
+                                          <div className="flex gap-4 mt-2">
+                                            <div className="flex items-center text-muted-foreground">
+                                              <Timer className="w-4 h-4 mr-1" />
+                                              {format(new Date(todo.deadline), "PPP")}
+                                            </div>
+                                            <div className="flex items-center text-muted-foreground">
+                                              <DollarSign className="w-4 h-4 mr-1" />
+                                              {todo.stake.toFixed(2)}
+                                            </div>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          {sectionKey === 'currentTasks' && (
+                                            <>
+                                              <Button 
+                                                onClick={() => {
+                                                  updateTodo(todo.id, { completed: true });
+                                                  setSelectedTaskId(todo.id);
+                                                }}
+                                              >
+                                                Mark Complete
+                                              </Button>
+                                              <Button
+                                                variant="destructive"
+                                                size="icon"
+                                                onClick={() => deleteTodo(todo.id)}
+                                              >
+                                                <Trash2 className="w-4 h-4" />
+                                              </Button>
+                                            </>
+                                          )}
+
+                                          {sectionKey === 'awaitingEvidence' && (
+                                            <div className="flex items-center gap-2">
+                                              <label className="cursor-pointer">
+                                                <Input
+                                                  type="file"
+                                                  className="hidden"
+                                                  onChange={(e) => handleFileUpload(todo.id, e.target.files?.[0]!)}
+                                                />
+                                                <Button variant="outline" size="icon" asChild>
+                                                  <div>
+                                                    <Upload className="w-4 h-4" />
+                                                  </div>
+                                                </Button>
+                                              </label>
+                                              <Button 
+                                                onClick={() => handleSubmitEvidence(todo.id)}
+                                                disabled={!todo.evidence}
+                                              >
+                                                Submit
+                                              </Button>
+                                            </div>
+                                          )}
+
+                                          {(sectionKey === 'approved' || sectionKey === 'inReview' || sectionKey === 'rejected') && (
+                                            <a
+                                              href={todo.evidence}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="text-blue-500 hover:underline hover:cursor-pointer"
+                                            >
+                                              View Evidence
+                                            </a>
+                                          )}
+
+                                          {sectionKey === 'pastDue' && (
+                                            <Button
+                                              variant="destructive"
+                                              size="icon"
+                                              onClick={() => deleteTodo(todo.id)}
+                                            >
+                                              <Trash2 className="w-4 h-4" />
+                                            </Button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </TabsContent>
               ))}
             </div>
@@ -452,7 +700,7 @@ function TodoCard({
                 href={todo.evidence}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-500 hover:underline"
+                className="text-blue-500 hover:underline hover:cursor-pointer"
               >
                 View Evidence
               </a>
