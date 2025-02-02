@@ -53,14 +53,14 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="container mx-auto py-8">
-      <Card className="max-w-md mx-auto">
+    <div className="container mx-auto py-8 bg-background text-foreground">
+      <Card className="max-w-md mx-auto bg-background text-foreground">
         <CardHeader>
           <CardTitle className="text-2xl font-bold text-center">
             {isSignUp ? "Create Account" : "Sign In"}
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="bg-background text-foreground">
           <form onSubmit={handleAuth} className="space-y-4">
             <Input
               type="email"

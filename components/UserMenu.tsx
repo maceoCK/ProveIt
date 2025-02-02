@@ -84,7 +84,7 @@ export default function UserMenu() {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-4">
+      <PopoverContent className="w-80 p-4 bg-background text-foreground">
         <div className="space-y-4">
           <div>
             <Label>Avatar</Label>
@@ -106,7 +106,7 @@ export default function UserMenu() {
             />
           </div>
           <div className="flex justify-between items-center">
-            <Button onClick={handleProfileUpdate}>Update Profile</Button>
+            <Button onClick={handleProfileUpdate} className='bg-background text-primary'>Update Profile</Button>
             <Button 
               variant="ghost" 
               onClick={() => supabase.auth.signOut()}

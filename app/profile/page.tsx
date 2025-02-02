@@ -71,7 +71,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="container mx-auto py-8 max-w-2xl">
+    <div className="container mx-auto py-8 max-w-2xl bg-background text-foreground">
       <h1 className="text-2xl font-bold mb-6">Edit Profile</h1>
       <div className="space-y-4">
         <div>
@@ -93,11 +93,12 @@ export default function ProfilePage() {
             />
           )}
         </div>
-        <div>
+        <div className="bg-background text-foreground">
           <Label>Username</Label>
           <Input
             value={username}
             onChange={(e) => setUsername(e.target.value)}
+            className="bg-background text-foreground"
           />
         </div>
         <Button onClick={handleProfileUpdate}>Save Changes</Button>

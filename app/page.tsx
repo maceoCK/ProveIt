@@ -331,7 +331,7 @@ export default function Home() {
                     New Group
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[400px] p-4 text-foreground">
+                <PopoverContent className="w-[400px] p-4 text-foreground bg-background">
                   <div className="flex gap-2">
                     <Input
                       placeholder="Group name"
@@ -429,7 +429,7 @@ export default function Home() {
                                           <Button
                                             variant="destructive"
                                             size="icon"
-                                            disabled={isPast(new Date(todo.deadline))}
+                                            className={cn({'hidden': isPast(new Date(todo.deadline))})}
                                             onClick={() => deleteTodo(todo.id)}
                                           >
                                             <Trash2 className="w-4 h-4" />
@@ -446,9 +446,9 @@ export default function Home() {
                                               onChange={(e) => handleFileUpload(todo.id, e.target.files?.[0]!)}
                                             />
                                             <Button variant="outline" size="icon" asChild>
-                                              <div>
+                                              <span>
                                                 <Upload className="w-4 h-4" />
-                                              </div>
+                                              </span>
                                             </Button>
                                           </label>
                                           <Button 
@@ -481,7 +481,7 @@ export default function Home() {
                                         <Button
                                           variant="destructive"
                                           size="icon"
-                                          disabled={isPast(new Date(todo.deadline))}
+                                          className={cn({'hidden': isPast(new Date(todo.deadline))})}
                                           onClick={() => deleteTodo(todo.id)}
                                         >
                                           <Trash2 className="w-4 h-4" />
@@ -572,7 +572,7 @@ export default function Home() {
                                               <Button
                                                 variant="destructive"
                                                 size="icon"
-                                                disabled={isPast(new Date(todo.deadline))}
+                                                className={cn({'hidden': isPast(new Date(todo.deadline))})}
                                                 onClick={() => deleteTodo(todo.id)}
                                               >
                                                 <Trash2 className="w-4 h-4" />
@@ -589,9 +589,9 @@ export default function Home() {
                                                   onChange={(e) => handleFileUpload(todo.id, e.target.files?.[0]!)}
                                                 />
                                                 <Button variant="outline" size="icon" asChild>
-                                                  <div>
+                                                  <span>
                                                     <Upload className="w-4 h-4" />
-                                                  </div>
+                                                  </span>
                                                 </Button>
                                               </label>
                                               <Button 
@@ -624,7 +624,7 @@ export default function Home() {
                                             <Button
                                               variant="destructive"
                                               size="icon"
-                                              disabled={isPast(new Date(todo.deadline))}
+                                              className={cn({'hidden': isPast(new Date(todo.deadline))})}
                                               onClick={() => deleteTodo(todo.id)}
                                             >
                                               <Trash2 className="w-4 h-4" />
@@ -657,7 +657,7 @@ export default function Home() {
             <Plus className="h-8 w-8" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[400px] p-4 text-foreground">
+        <PopoverContent className="w-[400px] p-4 text-foreground bg-background">
           <div className="space-y-4">
             <Input
               placeholder="What do you need to do?"
@@ -677,7 +677,7 @@ export default function Home() {
                   {date ? format(date, "PPP") : <span>Pick a deadline</span>}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
+              <PopoverContent className="w-auto p-0 bg-background text-foreground">
                 <Calendar
                   mode="single"
                   selected={date}
@@ -803,16 +803,11 @@ function TodoCard({
           <Button
             variant="destructive"
             size="icon"
-            disabled={isPast(new Date(todo.deadline))}
+            className={cn({'hidden': isPast(new Date(todo.deadline))})}
             onClick={() => onDelete(todo.id)}
           >
             <Trash2 className="w-4 h-4" />
           </Button>
-          {isPast(new Date(todo.deadline)) && (
-            <span className="text-sm text-muted-foreground">
-              Can't delete past due tasks
-            </span>
-          )}
         </div>
       </div>
     </Card>
