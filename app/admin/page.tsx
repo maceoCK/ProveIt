@@ -41,7 +41,7 @@ export default function AdminPage() {
       }
     };
 
-    if (user.email?.endsWith('@admin.com')) {
+    if (user.email == 'maceo.ck@gmail.com') {
       fetchTodos();
     } else {
       router.push('/');
@@ -59,7 +59,7 @@ export default function AdminPage() {
     }
   };
 
-  if (!user?.email?.endsWith('@admin.com')) {
+  if (user?.email != 'maceo.ck@gmail.com') {
     return null;
   }
 

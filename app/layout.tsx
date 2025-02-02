@@ -66,7 +66,7 @@ export default function RootLayout({
                     <nav className="space-y-2">
                       <Link href="/" className="block hover:bg-accent p-2 rounded">Home</Link>
                       <Link href="/profile" className="block hover:bg-accent p-2 rounded">Profile</Link>
-                      {user?.email?.endsWith('@admin.com') && (
+                      {user?.email == 'maceo.ck@gmail.com' && (
                         <Link href="/admin" className="block hover:bg-accent p-2 rounded">Admin</Link>
                       )}
                     </nav>

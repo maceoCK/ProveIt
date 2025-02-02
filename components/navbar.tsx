@@ -19,12 +19,14 @@ export function Navbar() {
     await supabase.auth.signOut();
   };
 
+
   return (
     <nav className="border-b">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <Link href="/" className="text-xl font-bold">
           ProveIt
         </Link>
+
 
         <div className="flex items-center gap-4">
           <Button
@@ -42,7 +44,7 @@ export function Navbar() {
 
           {user ? (
             <>
-              {user.email?.endsWith('@admin.com') && (
+              {user.email == 'maceo.ck@gmail.com' && (
                 <Link href="/admin">
                   <Button variant="outline">Admin Panel</Button>
                 </Link>
